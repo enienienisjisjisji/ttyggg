@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: ai-shorts-studio
+    runtime: docker
+    plan: starter
+    healthCheckPath: /health
+    envVars:
+      - key: PORT
+        value: 8000
