@@ -74,8 +74,57 @@ def status(request_id: str):
         return {'status': 'COMPLETED', 'video_url': (result.get('video') or {}).get('url')}
     return {'status': state_name, 'details': state.get('error')}
 
+
 @router.get('/diagnostics/fal')
 def diagnose_fal():
+    """Non-generating fal.ai authentication probe."""
+    key = os.getenv('FAL_KEY', '').strip()
+
+    if not key:
+        return {
+            'key_present': False,
+            'result': 'MISSING_KEY'
+        }
+
+    # Deliberately nonexistent request ID.
+    # This endpoint checks status; it does not create a video.
+    url = (
+        'https://queue.fal.run/'
+        + MODEL
+        + '/requests/'
+        + '00000000-0000-0000-0000-000000000000'
+        + '/status'
+    )
+
+    req = urllib.request.Request(
+        url,
+        headers={
+            'Authorization': 'Key ' + key,
+            'Accept': 'application/json'
+        },
+        method='GET'
+    )
+
+    try:
+        with urllib.request.urlopen(req, timeout=15) as response:
+            code = response.status
+    except urllib.error.HTTPError as e:
+        code = e.code
+    except Exception:
+        return {
+            'key_present': True,
+            'result': 'NETWORK_ERROR'
+        }
+
+    return {
+        'key_present': True,
+        'http_status': code,
+        'result': (
+            'AUTH_REJECTED' if code in (401, 403)
+            else 'PROBE_RESPONSE'
+        )
+    }
+
     """Check fal.ai authentication without generating video."""
     key = os.getenv('FAL_KEY', '').strip()
     if not key:
