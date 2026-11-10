@@ -8,7 +8,8 @@ import tempfile, subprocess, json, shutil, os
 
 ROOT=Path(__file__).parent
 app=FastAPI(title='AI Shorts Studio')
-
+from avatar_api import router as avatar_router
+app.include_router(avatar_router)
 @app.get('/health')
 def health():
     return {'status':'ok'}
