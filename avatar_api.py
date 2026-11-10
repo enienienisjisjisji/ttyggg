@@ -32,9 +32,20 @@ def call(url, method='GET', data=None):
     try:
         with urllib.request.urlopen(req, timeout=25) as response:
             return json.loads(response.read(1024*1024))
-    except urllib.error.HTTPError as e:
-        msg = e.read(1500).decode('utf-8', 'replace')
-        raise HTTPException(e.code, '영상 서비스 오류: ' + msg)
+ 
+except urllib.error.HTTPError as e:
+    msg = e.read(1500).decode('utf-8', 'replace')
+    if e.code in (401, 403):
+        raise HTTPException(
+            502,
+            'fal.ai 인증 또는 모델 접근 권한 오류 '
+            f'(HTTP {e.code}): {msg}'
+        )
+    raise HTTPException(
+        502,
+        f'fal.ai 요청 실패 (HTTP {e.code}): {msg}'
+    )
+
     except Exception as e:
         raise HTTPException(502, '영상 서비스 연결 오류: ' + str(e))
 
