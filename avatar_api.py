@@ -73,3 +73,45 @@ def status(request_id: str):
         result = call(QUEUE + '/requests/' + request_id)
         return {'status': 'COMPLETED', 'video_url': (result.get('video') or {}).get('url')}
     return {'status': state_name, 'details': state.get('error')}
+
+@router.get('/diagnostics/fal')
+def diagnose_fal():
+    """Check fal.ai authentication without generating video."""
+    key = os.getenv('FAL_KEY', '').strip()
+    if not key:
+        return {
+            'key_present': False,
+            'authentication': 'NOT_TESTED',
+            'reason': 'FAL_KEY is missing'
+        }
+
+    url = 'https://queue.fal.run/' + MODEL
+    req = urllib.request.Request(
+        url,
+        headers={
+            'Authorization': 'Key ' + key,
+            'Accept': 'application/json'
+        },
+        method='GET'
+    )
+
+    try:
+        with urllib.request.urlopen(req, timeout=15) as response:
+            return {
+                'key_present': True,
+                'http_status': response.status,
+                'authentication': 'CHECK_RESPONSE'
+            }
+    except urllib.error.HTTPError as e:
+        return {
+            'key_present': True,
+            'http_status': e.code,
+            'authentication': 'CHECK_RESPONSE',
+            'reason': 'Model endpoint response'
+        }
+    except Exception:
+        return {
+            'key_present': True,
+            'authentication': 'INCONCLUSIVE',
+            'reason': 'Connection failed'
+        }
